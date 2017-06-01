@@ -37,6 +37,7 @@ import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.labels.LabelAtom;
 import hudson.slaves.Cloud;
 import hudson.slaves.JNLPLauncher;
 import hudson.slaves.NodeProvisioner;
@@ -174,20 +175,38 @@ public class ECSCloud extends Cloud {
         return getTask(label) != null;
     }
 
+    private boolean labelMatchesTrimmed(Set<LabelAtom> labelAtoms, Set<LabelAtom> taskLabelAtoms) {
+        for (LabelAtom labelAtom : labelAtoms) {
+            for (LabelAtom taskLabelAtom : taskLabelAtoms) {
+                if (getTrimmedLabel(labelAtom.getName()).equals(taskLabelAtom.getName())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private String getTrimmedLabel(String label) {
+        if (label.indexOf("::") > 0) {
+            return label.substring(0, label.indexOf("::"));
+        }
+        return label;
+    }
+
     private ECSTask getTask(Label label) {
         if (label == null) {
             return null;
         }
         if (templates != null) {
             for (ECSTaskTemplate t : templates) {
-                if (label.matches(t.getLabelSet())) {
+                if (labelMatchesTrimmed(label.listAtoms(), t.getLabelSet())) {
                     return t;
                 }
             }
         }
         if (taskDefinitions != null) {
             for (ECSTaskDefinition t : taskDefinitions) {
-                if (label.matches(t.getLabelSet())) {
+                if (labelMatchesTrimmed(label.listAtoms(), t.getLabelSet())) {
                     return t;
                 }
             }
